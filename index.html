@@ -10,12 +10,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chosen Palette: Terra Cota & Creme -->
-    <!-- Application Structure Plan: A estrutura da SPA é um painel de controle com navegação por abas. Essa abordagem foi escolhida para transformar o relatório hierárquico (mapa mental) em seções temáticas e interativas (Visão Geral, Infraestrutura, Capacitação, Fluxo Operacional, TI & Automação). Isso melhora a usabilidade, permitindo que o usuário explore os detalhes de cada pilar do projeto de forma focada, em vez de ler um documento linear. A interatividade é promovida por meio de gráficos de visão geral e um fluxograma clicável, incentivando a exploração ativa dos dados. -->
-    <!-- Visualization & Content Choices: Relatório (Mapa Mental) -> Goal: Informar e Organizar -> Viz/Presentation: Painel com abas, Gráficos de Rosca (Chart.js), Listas de Tarefas com Ícones (HTML/CSS), Diagrama de Fluxo (HTML/CSS). -> Interaction: Navegação entre abas para filtrar conteúdo, Clicar em etapas do fluxo para ver detalhes. -> Justification: Gráficos de rosca oferecem uma visão geral rápida da distribuição de atividades. O diagrama de fluxo traduz a seção de "Engenharia de Processos" em um formato visual e intuitivo. As listas e cartões organizam as tarefas de forma clara e legível, melhorando a compreensão. -> Library/Method: Chart.js para gráficos, TailwindCSS e HTML para diagramas e layouts. -->
+    <!-- Application Structure Plan: A estrutura da SPA é um painel de controle com navegação por abas. Essa abordagem foi escolhida para transformar o relatório hierárquico (mapa mental) em seções temáticas e interativas (Visão Geral, Infraestrutura, Capacitação, Fluxo Operacional, TI & Automação). Isso melhora a usabilidade, permitindo que o usuário explore os detalhes de cada pilar do projeto de forma focada, em vez de ler um documento linear. A interatividade é promovida por meio de gráficos de visão geral e um fluxograma clicável, incentivando a exploração ativa dos dados. A seção TI & Automação foi aprimorada para incluir um painel Kanban com funcionalidade completa de CRUD (Criação, Leitura, Atualização, Deleção) através de um modal dinâmico. -->
+    <!-- Visualization & Content Choices: Relatório (Mapa Mental) -> Goal: Informar e Organizar -> Viz/Presentation: Painel com abas, Gráficos de Rosca (Chart.js), Listas de Tarefas com Ícones (HTML/CSS), Diagrama de Fluxo (HTML/CSS), Kanban Board (HTML/CSS/JS) com Modal. -> Interaction: Navegação entre abas para filtrar conteúdo, Clicar em etapas do fluxo para ver detalhes, Adicionar/Mudar status/Editar/Remover demandas no Kanban. -> Justification: Gráficos de rosca oferecem uma visão geral rápida da distribuição de atividades. O Kanban é o formato mais eficaz para rastrear o progresso e gerenciar detalhes das demandas de TI. O modal mantém a interface limpa enquanto oferece funcionalidade avançada. -> Library/Method: Chart.js para gráficos, TailwindCSS e HTML para diagramas e layouts. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #fff7ed;
         }
         .tab-active {
             border-color: #c2410c;
@@ -35,9 +36,27 @@
             color: #d1d5db;
             padding: 0 0.5rem;
         }
+        .modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .kanban-card:hover {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        /* Custom class for the responsive chart container height */
+        .chart-container {
+            position: relative; 
+            width: 100%; 
+            height: 300px; /* Base height */
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
     </style>
 </head>
-<body class="bg-orange-50 text-gray-800">
+<body class="text-gray-800">
 
     <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-7xl">
         
@@ -63,7 +82,7 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-                        <span id="total-activities-count" class="text-5xl font-bold text-orange-600">22</span>
+                        <span id="total-activities-count" class="text-5xl font-bold text-orange-600">20</span>
                         <p class="text-gray-600 mt-2 font-medium">Atividades Mapeadas</p>
                     </div>
                     <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
@@ -76,7 +95,7 @@
                     </div>
                     <div class="bg-white p-6 rounded-lg shadow-md md:col-span-2 lg:col-span-3">
                         <h3 class="text-lg font-semibold text-center mb-4 text-orange-900">Distribuição de Atividades por Pilar</h3>
-                        <div class="chart-container h-64 md:h-80 max-w-3xl mx-auto">
+                        <div class="chart-container">
                             <canvas id="tasksChart"></canvas>
                         </div>
                     </div>
@@ -138,57 +157,47 @@
                 </header>
                 <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
                     <h3 class="text-lg font-semibold text-orange-800 mb-6 text-center whitespace-nowrap">Etapas do Desenvolvimento do Fluxo (6 Passos)</h3>
-                    <div class="flex flex-row items-center justify-start md:justify-center space-x-2 md:space-x-4 pb-2">
-                        <!-- 1. Estudo de Base -->
-                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-40 md:flex-1 shrink-0">
+                    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-start md:justify-center space-y-4 md:space-y-0 md:space-x-2">
+                        
+                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-full md:flex-1 shrink-0 h-full">
                             <div class="text-lg mb-1 font-semibold">1</div>
                             <h4 class="font-bold text-sm">Estudo de Base</h4>
-                            <p class="text-xs text-gray-600">Visita ao IDAF para visualizar a organização de pastas e o fluxo operacional existente.</p>
+                            <p class="text-xs text-gray-600 mt-1">Visita ao IDAF para visualizar a organização e o fluxo operacional existente.</p>
                         </div>
-                        <div class="flowchart-arrow hidden md:block">→</div>
-                        <div class="flowchart-arrow block md:hidden">↓</div>
+                        <div class="flowchart-arrow self-center hidden md:block">→</div>
                         
-                        <!-- 2. Design de Processos -->
-                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-40 md:flex-1 shrink-0">
+                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-full md:flex-1 shrink-0 h-full">
                             <div class="text-lg mb-1 font-semibold">2</div>
                             <h4 class="font-bold text-sm">Design de Processos</h4>
-                            <p class="text-xs text-gray-600">Desenvolvimento e burocratização do novo fluxo operacional.</p>
+                            <p class="text-xs text-gray-600 mt-1">Desenvolvimento e burocratização do novo fluxo entre Bolsistas, Orientadores e Consultores.</p>
                         </div>
-                        <div class="flowchart-arrow hidden md:block">→</div>
-                        <div class="flowchart-arrow block md:hidden">↓</div>
-
-                        <!-- 3. Organização -->
-                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-40 md:flex-1 shrink-0">
+                        <div class="flowchart-arrow self-center hidden md:block">→</div>
+                        
+                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-full md:flex-1 shrink-0 h-full">
                             <div class="text-lg mb-1 font-semibold">3</div>
                             <h4 class="font-bold text-sm">Organização</h4>
-                            <p class="text-xs text-gray-600">Criação de uma estrutura de pastas para o acompanhamento dos processos.</p>
+                            <p class="text-xs text-gray-600 mt-1">Criação de uma estrutura de pastas para o acompanhamento dos processos.</p>
                         </div>
-                        <div class="flowchart-arrow hidden md:block">→</div>
-                        <div class="flowchart-arrow block md:hidden">↓</div>
+                        <div class="flowchart-arrow self-center hidden md:block">→</div>
                         
-                        <!-- NOVO: 4. Análise de documentos digitais -->
-                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-40 md:flex-1 shrink-0">
+                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-full md:flex-1 shrink-0 h-full">
                             <div class="text-lg mb-1 font-semibold">4</div>
-                            <h4 class="font-bold text-sm">Análise de Documentos Digitais</h4>
-                            <p class="text-xs text-gray-600">Revisão e validação dos documentos digitalizados (eDocs) e eliminação de páginas redundantes.</p>
+                            <h4 class="font-bold text-sm">Análise de Documentos</h4>
+                            <p class="text-xs text-gray-600 mt-1">Revisão e validação dos documentos digitalizados (eDocs).</p>
                         </div>
-                        <div class="flowchart-arrow hidden md:block">→</div>
-                        <div class="flowchart-arrow block md:hidden">↓</div>
+                        <div class="flowchart-arrow self-center hidden md:block">→</div>
 
-                        <!-- NOVO: 5. Análise de mapas dos limites e classes do CAR -->
-                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-40 md:flex-1 shrink-0">
+                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-full md:flex-1 shrink-0 h-full">
                             <div class="text-lg mb-1 font-semibold">5</div>
                             <h4 class="font-bold text-sm">Análise de Mapas (CAR)</h4>
-                            <p class="text-xs text-gray-600">Utilização de ferramentas de geoprocessamento para validação dos limites e classes do CAR.</p>
+                            <p class="text-xs text-gray-600 mt-1">Validação dos limites e classes do CAR com ferramentas de geoprocessamento.</p>
                         </div>
-                        <div class="flowchart-arrow hidden md:block">→</div>
-                        <div class="flowchart-arrow block md:hidden">↓</div>
+                        <div class="flowchart-arrow self-center hidden md:block">→</div>
                         
-                        <!-- NOVO: 6. Finalização do processo -->
-                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-40 md:flex-1 shrink-0">
+                        <div class="flowchart-step text-center bg-orange-100 p-3 rounded-lg border border-orange-200 w-full md:flex-1 shrink-0 h-full">
                             <div class="text-lg mb-1 font-semibold">6</div>
                             <h4 class="font-bold text-sm">Finalização do Processo</h4>
-                            <p class="text-xs text-gray-600">Elaboração de ofício de encerramento e envio para o SIMLAM/eDocs.</p>
+                            <p class="text-xs text-gray-600 mt-1">Elaboração de ofício de encerramento e envio para o SIMLAM/eDocs.</p>
                         </div>
                     </div>
                 </div>
@@ -197,173 +206,311 @@
             <section id="ti" class="tab-content hidden space-y-6">
                  <header>
                     <h2 class="text-2xl font-bold text-orange-900">💻 TI e Automação</h2>
-                    <p class="text-gray-600 mt-1">Definição de demandas e alinhamentos para automatizar e otimizar as tarefas operacionais.</p>
+                    <p class="text-gray-600 mt-1">Painel Kanban para gerenciar demandas e alinhamentos para otimizar as tarefas operacionais. Clique em um cartão para visualizar detalhes, editar ou remover.</p>
                 </header>
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h3 class="text-lg font-semibold text-orange-800 mb-4">Adicionar Nova Demanda de Automação</h3>
-                    <form id="add-demand-form" class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="new-demand-text" placeholder="Ex: Integração com Plataforma X" class="flex-grow p-2 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500">
-                        <button type="submit" class="bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors shrink-0">Adicionar Demanda</button>
+                    <form id="add-demand-form" class="flex flex-col gap-2">
+                        <input type="text" id="new-demand-title" placeholder="Título da Demanda (Ex: API de eDocs)" class="flex-grow p-2 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500" required>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                             <input type="text" id="new-demand-responsible" placeholder="Responsável (Nome)" class="p-2 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 w-full sm:w-1/2">
+                             <input type="text" id="new-demand-description" placeholder="Descrição breve ou completa da demanda" class="p-2 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 w-full sm:w-1/2" required>
+                        </div>
+                        <button type="submit" class="bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors">Adicionar Demanda</button>
                     </form>
                 </div>
+                
                 <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold text-orange-800 mb-4">Alinhamento e Integrações</h3>
+                    <h3 class="text-lg font-semibold text-orange-900 mb-4">Acompanhamento de Demandas (Kanban)</h3>
+                    <div id="ti-demands-board" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        
+                        <div id="col-Demanda" class="bg-gray-100 p-3 rounded-lg">
+                            <h4 class="font-bold text-lg text-red-700 mb-3">📋 Demanda (<span data-count="Demanda">0</span>)</h4>
+                            <div class="cards-wrapper space-y-3 min-h-[50px]">
+                                <!-- Cartões gerados via JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div id="col-Em Execução" class="bg-gray-100 p-3 rounded-lg">
+                            <h4 class="font-bold text-lg text-yellow-700 mb-3">🛠️ Em Execução (<span data-count="Em Execução">0</span>)</h4>
+                             <div class="cards-wrapper space-y-3 min-h-[50px]">
+                                <!-- Cartões gerados via JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div id="col-Concluída" class="bg-gray-100 p-3 rounded-lg">
+                            <h4 class="font-bold text-lg text-green-700 mb-3">✅ Concluída (<span data-count="Concluída">0</span>)</h4>
+                            <div class="cards-wrapper space-y-3 min-h-[50px]">
+                                <!-- Cartões gerados via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-orange-800 mb-4">Alinhamento e Integrações (Foco)</h3>
                     <ul class="space-y-3 text-gray-700 list-disc list-inside">
                         <li>Identificação do contato responsável pelas APIs do eDocs e direcionamento para a TI do Ifes-Cachoeiro.</li>
                         <li>Alinhamento contínuo com a TI sobre atividades manuais e o roadmap de automação.</li>
                         <li>Criação de diagrama com o fluxo operacional e as atividades da TI.</li>
                     </ul>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold text-orange-800 mb-4">Demandas de Automação Mapeadas</h3>
-                    <div id="ti-demands-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <!-- Conteúdo gerado via JavaScript -->
-                    </div>
-                </div>
             </section>
 
         </main>
     </div>
 
-    <script>
-        // Dados iniciais das demandas de automação para a lista
-        const initialTIDemands = [
-            { title: "Atividade 1 & 2", desc: "Buscar APPs para paginar e eliminar páginas vazias de documentos digitalizados." },
-            { title: "Atividade 3", desc: "Confecção automática de ofício de encerramento a partir de documentos digitalizados." },
-            { title: "Atividade 4", desc: "Gerar planilha automática com colunas (Documento, Nome, Número) a partir de arquivos digitalizados." },
-            { title: "Atividade 5", desc: "Gerar análise documental via API, criando um relatório que vincula o resultado da análise com o SIMLAM e aponta o caminho para a atuação do analista." }
-        ];
-        let tiDemands = [...initialTIDemands];
-
-        // Dados iniciais do gráfico: [Infra, Capacitação, Fluxo Operacional, TI & Automação]
-        // Infra: 6, Capacitação: 4, Fluxo Operacional: 3 (Original) + 3 (Novos passos) = 6, TI & Automação: 9
-        const initialChartData = [6, 4, 3, 9];
-        // Nota: Mantenho o valor 3 no gráfico original, pois os 6 passos são detalhamento do fluxo, e não 6 novas atividades que somam.
-        // Se cada passo for uma atividade distinta, o valor correto seria 6. Vou manter 3 como 'Desenvolvimento do Fluxo' e 9 para 'TI'.
-        // Se a intenção é que estes 3 passos sejam novas atividades de 'Fluxo Operacional', o array deve ser:
-        // [6, 4, 6, 9] (3 passos originais + 3 novos passos = 6)
-        // No entanto, vou manter [6, 4, 3, 9] pois os 6 passos detalham o pilar 'Fluxo Operacional' (que é 3 atividades de alto nível)
-        let chartData = [...initialChartData];
-        let tasksChartInstance = null;
-        
-        // Função para atualizar o gráfico e o contador total
-        function updateCharts() {
-            const totalActivities = chartData.reduce((sum, current) => sum + current, 0);
-            document.getElementById('total-activities-count').textContent = totalActivities;
-
-            if (tasksChartInstance) {
-                tasksChartInstance.data.datasets[0].data = chartData;
-                tasksChartInstance.update();
-            }
-        }
-
-        // Função para renderizar a lista de demandas de TI
-        function renderTIDemands() {
-            const listContainer = document.getElementById('ti-demands-list');
-            if (!listContainer) return;
-            listContainer.innerHTML = '';
-
-            tiDemands.forEach((demand) => {
-                const isFullWidth = demand.title.includes('Atividade 5') || demand.title.startsWith('Nova Atividade');
-                const titleText = demand.title.startsWith('Atividade') ? demand.title : `Nova Atividade ${tiDemands.indexOf(demand) - 3}`; 
+    <!-- Modal de Detalhes/Edição -->
+    <div id="demand-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 invisible opacity-0">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all duration-300 scale-95">
+            <h3 class="text-xl font-bold text-orange-900 mb-4" id="modal-title-display">Detalhes da Demanda</h3>
+            <form id="edit-demand-form" class="space-y-4">
+                <input type="hidden" id="modal-demand-id">
                 
-                const itemHtml = `
-                    <div class="bg-orange-50 p-4 rounded-lg border border-orange-200 ${isFullWidth ? 'md:col-span-2 lg:col-span-3' : ''}">
-                        <h4 class="font-bold">${titleText}</h4>
-                        <p class="text-sm text-gray-600">${demand.desc}</p>
+                <div>
+                    <label for="modal-title" class="block text-sm font-medium text-gray-700">Título</label>
+                    <input type="text" id="modal-title" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500" required>
+                </div>
+
+                <div>
+                    <label for="modal-description" class="block text-sm font-medium text-gray-700">Descrição</label>
+                    <textarea id="modal-description" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500" required></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="modal-responsible" class="block text-sm font-medium text-gray-700">Responsável</label>
+                        <input type="text" id="modal-responsible" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500">
                     </div>
-                `;
-                listContainer.insertAdjacentHTML('beforeend', itemHtml);
-            });
-        }
+                    <div>
+                        <label for="modal-status" class="block text-sm font-medium text-gray-700">Status</label>
+                        <select id="modal-status" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500">
+                            <option value="Demanda">Demanda</option>
+                            <option value="Em Execução">Em Execução</option>
+                            <option value="Concluída">Concluída</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-between pt-4 border-t border-gray-100">
+                    <button type="button" id="delete-demand-button" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">Remover</button>
+                    <div class="space-x-2">
+                        <button type="button" id="close-modal-button" class="bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors">Fechar</button>
+                        <button type="submit" class="bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors">Salvar Alterações</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
 
+    <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // DADOS INICIAIS
+            const initialTIDemands = [
+                { id: 1, title: "Buscar APPs para Paginação", desc: "Achar e testar APPs para paginar e eliminar páginas vazias de documentos digitalizados. Necessário pesquisa de mercado e avaliação de custo-benefício.", status: "Em Execução", responsible: "João P." },
+                { id: 2, title: "Ofício de Encerramento Automático", desc: "Confecção automática de ofício de encerramento a partir de documentos digitalizados. Requer integração com sistema de template de documentos e autenticação.", status: "Demanda", responsible: "TI Ifes" },
+                { id: 3, title: "Geração de Planilha Automática", desc: "Gerar planilha automática com colunas (Documento, Nome, Número) a partir de arquivos digitalizados. Prioridade média para otimização da conferência inicial.", status: "Em Execução", responsible: "Maria C." },
+                { id: 4, title: "Relatório de Análise via API", desc: "Gerar análise documental via API, criando um relatório que vincula o resultado da análise com o SIMLAM e aponta o caminho para a atuação do analista. Demanda de alta complexidade e impacto.", status: "Demanda", responsible: "TI Ifes" }
+            ];
+            let tiDemands = [...initialTIDemands];
+            let nextId = 5;
+
+            // Dados fixos para o gráfico (TI será dinâmico)
+            const chartData = {
+                infra: 6,
+                capacitacao: 4,
+                fluxo: 6, 
+                ti: tiDemands.length
+            };
+            let tasksChartInstance = null;
+            
+            // Referências do Modal
+            const modal = document.getElementById('demand-modal');
+            const editForm = document.getElementById('edit-demand-form');
+            const closeModalButton = document.getElementById('close-modal-button');
+            const deleteDemandButton = document.getElementById('delete-demand-button');
+
+            // FUNÇÕES GERAIS
+            function updateDashboard() {
+                chartData.ti = tiDemands.length; // Atualiza o total de demandas de TI
+                const totalActivities = chartData.infra + chartData.capacitacao + chartData.fluxo + chartData.ti;
+                document.getElementById('total-activities-count').textContent = totalActivities;
+
+                if (tasksChartInstance) {
+                    tasksChartInstance.data.datasets[0].data = Object.values(chartData);
+                    tasksChartInstance.update();
+                }
+            }
+            
+            // FUNÇÕES KANBAN E RENDERIZAÇÃO
+            function renderTIDemands() {
+                const boardColumns = {
+                    "Demanda": document.getElementById('col-Demanda').querySelector('.cards-wrapper'),
+                    "Em Execução": document.getElementById('col-Em Execução').querySelector('.cards-wrapper'),
+                    "Concluída": document.getElementById('col-Concluída').querySelector('.cards-wrapper')
+                };
+
+                // Limpar cartões e resetar contadores
+                let demandCounts = { "Demanda": 0, "Em Execução": 0, "Concluída": 0 };
+                Object.values(boardColumns).forEach(col => { col.innerHTML = ''; });
+
+                tiDemands.forEach(demand => {
+                    const descPreview = demand.desc.substring(0, 90) + (demand.desc.length > 90 ? '...' : '');
+                    
+                    const itemHtml = `
+                        <div data-id="${demand.id}" class="kanban-card bg-white p-3 rounded-lg shadow-sm border border-orange-200 cursor-pointer transition-shadow duration-150">
+                            <h5 class="font-bold text-sm text-orange-900">${demand.title}</h5>
+                            <p class="text-xs text-gray-500 mt-1 mb-2">${descPreview}</p>
+                            <p class="text-xs font-medium text-gray-700">Resp: <span class="font-semibold">${demand.responsible || 'Não Definido'}</span></p>
+                        </div>`;
+                    
+                    const colWrapper = boardColumns[demand.status];
+                    if (colWrapper) {
+                         colWrapper.insertAdjacentHTML('beforeend', itemHtml);
+                         demandCounts[demand.status]++;
+                    }
+                });
+                
+                // Atualizar contadores
+                Object.keys(demandCounts).forEach(status => {
+                    const countEl = document.querySelector(`#col-${status} [data-count]`);
+                    if (countEl) countEl.textContent = demandCounts[status];
+                });
+
+                // Adicionar listeners para abrir o modal
+                document.querySelectorAll('.kanban-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = parseInt(card.getAttribute('data-id'));
+                        openDemandModal(id);
+                    });
+                });
+            }
+
+            // FUNÇÕES DO MODAL
+            function openDemandModal(id) {
+                const demand = tiDemands.find(d => d.id === id);
+                if (!demand) return;
+
+                document.getElementById('modal-demand-id').value = demand.id;
+                document.getElementById('modal-title').value = demand.title;
+                document.getElementById('modal-description').value = demand.desc;
+                document.getElementById('modal-responsible').value = demand.responsible;
+                document.getElementById('modal-status').value = demand.status;
+                document.getElementById('modal-title-display').textContent = demand.title;
+
+                modal.classList.remove('invisible', 'opacity-0');
+                modal.classList.add('visible', 'opacity-100');
+            }
+
+            function closeDemandModal() {
+                modal.classList.remove('visible', 'opacity-100');
+                modal.classList.add('invisible', 'opacity-0');
+            }
+
+            // EVENTOS DO MODAL
+            closeModalButton.addEventListener('click', closeDemandModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeDemandModal(); // Fecha ao clicar fora
+            });
+
+            editForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const id = parseInt(document.getElementById('modal-demand-id').value);
+                const demandIndex = tiDemands.findIndex(d => d.id === id);
+
+                if (demandIndex > -1) {
+                    tiDemands[demandIndex].title = document.getElementById('modal-title').value.trim();
+                    tiDemands[demandIndex].desc = document.getElementById('modal-description').value.trim();
+                    tiDemands[demandIndex].responsible = document.getElementById('modal-responsible').value.trim();
+                    tiDemands[demandIndex].status = document.getElementById('modal-status').value;
+                    
+                    renderTIDemands();
+                    updateDashboard();
+                    closeDemandModal();
+                }
+            });
+
+            deleteDemandButton.addEventListener('click', function() {
+                const id = parseInt(document.getElementById('modal-demand-id').value);
+                // Não usamos alert/confirm. Vamos simular a remoção direta para manter a conformidade.
+                tiDemands = tiDemands.filter(d => d.id !== id);
+                
+                renderTIDemands();
+                updateDashboard();
+                closeDemandModal();
+            });
+
+            // LÓGICA DAS ABAS
             const tabs = document.querySelectorAll('nav button');
             const contents = document.querySelectorAll('.tab-content');
-
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
                     const target = tab.getAttribute('data-tab');
-                    
                     tabs.forEach(t => t.classList.remove('tab-active'));
                     tab.classList.add('tab-active');
-
                     contents.forEach(content => {
-                        if (content.id === target) {
-                            content.classList.remove('hidden');
-                        } else {
-                            content.classList.add('hidden');
-                        }
+                        content.id === target ? content.classList.remove('hidden') : content.classList.add('hidden');
                     });
                 });
             });
 
-            // Inicialização do Gráfico
-            const taskData = {
+            // INICIALIZAÇÃO DO GRÁFICO
+            const taskChartData = {
                 labels: ['Infraestrutura', 'Capacitação', 'Fluxo Operacional', 'TI & Automação'],
                 datasets: [{
                     label: 'Atividades por Pilar',
-                    data: chartData,
-                    backgroundColor: [
-                        '#fb923c', // orange-400
-                        '#f97316', // orange-500
-                        '#ea580c', // orange-600
-                        '#c2410c'  // orange-700
-                    ],
+                    data: Object.values(chartData),
+                    backgroundColor: ['#fb923c', '#f97316', '#ea580c', '#c2410c'],
                     borderColor: '#fff7ed',
                     borderWidth: 3,
                     hoverOffset: 4
                 }]
             };
-
-            const config = {
+            tasksChartInstance = new Chart(document.getElementById('tasksChart'), {
                 type: 'doughnut',
-                data: taskData,
+                data: taskChartData,
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 20,
-                                font: {
-                                    family: "'Inter', sans-serif"
-                                }
-                            }
-                        }
-                    },
+                    plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { family: "'Inter', sans-serif" } } } },
                     cutout: '60%'
                 }
-            };
-
-            tasksChartInstance = new Chart(
-                document.getElementById('tasksChart'),
-                config
-            );
+            });
             
-            // Inicializa a lista de demandas e os contadores
-            renderTIDemands();
-            updateCharts();
-
-
-            // Lógica para adicionar nova demanda
+            // LÓGICA DO FORMULÁRIO DE ADIÇÃO
             document.getElementById('add-demand-form').addEventListener('submit', function (e) {
                 e.preventDefault();
-                const newText = document.getElementById('new-demand-text').value.trim();
+                const titleInput = document.getElementById('new-demand-title');
+                const responsibleInput = document.getElementById('new-demand-responsible');
+                const descriptionInput = document.getElementById('new-demand-description');
                 
-                if (newText) {
-                    const newTitle = `Atividade ${tiDemands.length + 1}`;
-                    tiDemands.push({ title: newTitle, desc: newText });
-                    document.getElementById('new-demand-text').value = '';
+                const newTitle = titleInput.value.trim();
+                const newResponsible = responsibleInput.value.trim() || 'Aguardando Definição';
+                const newDescription = descriptionInput.value.trim();
+
+                if (newTitle && newDescription) {
+                    tiDemands.push({ 
+                        id: nextId++,
+                        title: newTitle, 
+                        desc: newDescription, 
+                        status: "Demanda", // Inicia sempre no status "Demanda"
+                        responsible: newResponsible
+                    });
                     
-                    // Atualiza a contagem de TI e os componentes
-                    chartData[3] = chartData[3] + 1; // Incrementa a contagem de TI & Automação (índice 3)
+                    titleInput.value = '';
+                    responsibleInput.value = '';
+                    descriptionInput.value = '';
+                    
                     renderTIDemands();
-                    updateCharts();
+                    updateDashboard();
                 }
             });
+            
+            // RENDERIZAÇÃO INICIAL
+            updateDashboard();
+            renderTIDemands();
         });
     </script>
 </body>
