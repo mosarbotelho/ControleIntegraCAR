@@ -54,6 +54,11 @@
         @media (min-width: 768px) {
             .chart-container { height: 350px; }
         }
+        /* Estilo para desabilitar o input de forma visual mais clara */
+        #modal-end-date:disabled {
+            background-color: #f3f4f6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -277,7 +282,19 @@
                     <textarea id="modal-description" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500" required></textarea>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="modal-start-date" class="block text-sm font-medium text-gray-700">Data de Início</label>
+                        <input type="date" id="modal-start-date" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500">
+                    </div>
+                    <div>
+                        <label for="modal-end-date" class="block text-sm font-medium text-gray-700">Data de Término</label>
+                        <!-- O campo Data de Término é controlado via JavaScript, sendo habilitado apenas para o status 'Concluída' -->
+                        <input type="date" id="modal-end-date" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500" disabled>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="modal-responsible" class="block text-sm font-medium text-gray-700">Responsável</label>
                         <input type="text" id="modal-responsible" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500">
@@ -306,17 +323,31 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // DADOS INICIAIS
+            
+            // FUNÇÃO AUXILIAR PARA PEGAR A DATA DE HOJE (YYYY-MM-DD)
+            function getTodayDateFormatted() {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // DADOS INICIAIS (Ajustados para testar a lógica de status/data)
             const initialTIDemands = [
-                { id: 1, title: "Buscar APPs para Paginação", desc: "Achar e testar APPs para paginar e eliminar páginas vazias de documentos digitalizados. Necessário pesquisa de mercado e avaliação de custo-benefício.", status: "Em Execução", responsible: "João P." },
-                { id: 2, title: "Ofício de Encerramento Automático", desc: "Confecção automática de ofício de encerramento a partir de documentos digitalizados. Requer integração com sistema de template de documentos e autenticação.", status: "Demanda", responsible: "TI Ifes" },
-                { id: 3, title: "Geração de Planilha Automática", desc: "Gerar planilha automática com colunas (Documento, Nome, Número) a partir de arquivos digitalizados. Prioridade média para otimização da conferência inicial.", status: "Em Execução", responsible: "Maria C." },
-                { id: 4, title: "Relatório de Análise via API", desc: "Gerar análise documental via API, criando um relatório que vincula o resultado da análise com o SIMLAM e aponta o caminho para a atuação do analista. Demanda de alta complexidade e impacto.", status: "Demanda", responsible: "TI Ifes" }
+                // ID 1: Concluída (Data Final deve estar preenchida e modal habilitado)
+                { id: 1, title: "Buscar APPs para Paginação", desc: "Achar e testar APPs para paginar e eliminar páginas vazias de documentos digitalizados.", status: "Concluída", responsible: "João P.", startDate: "2024-09-15", endDate: "2024-10-30" }, 
+                // ID 2: Demanda (Data Final deve estar vazia e modal desabilitado)
+                { id: 2, title: "Ofício de Encerramento Automático", desc: "Confecção automática de ofício de encerramento a partir de documentos digitalizados.", status: "Demanda", responsible: "TI Ifes", startDate: "2024-10-01", endDate: "" }, 
+                // ID 3: Em Execução (Data Final deve estar vazia e modal desabilitado)
+                { id: 3, title: "Geração de Planilha Automática", desc: "Gerar planilha automática com colunas (Documento, Nome, Número) a partir de arquivos digitalizados.", status: "Em Execução", responsible: "Maria C.", startDate: "2024-10-10", endDate: "" },
+                // ID 4: Demanda (Data Final deve estar vazia e modal desabilitado)
+                { id: 4, title: "Relatório de Análise via API", desc: "Gerar análise documental via API, criando um relatório que vincula o resultado da análise com o SIMLAM.", status: "Demanda", responsible: "TI Ifes", startDate: "", endDate: "" }
             ];
             let tiDemands = [...initialTIDemands];
             let nextId = 5;
 
-            // Dados fixos para o gráfico (TI será dinâmico)
+            // Dados fixos para o gráfico
             const chartData = {
                 infra: 6,
                 capacitacao: 4,
@@ -330,6 +361,14 @@
             const editForm = document.getElementById('edit-demand-form');
             const closeModalButton = document.getElementById('close-modal-button');
             const deleteDemandButton = document.getElementById('delete-demand-button');
+
+            // FUNÇÃO AUXILIAR DE DATA PARA EXIBIÇÃO
+            function formatDateDisplay(dateString) {
+                if (!dateString) return 'N/A';
+                // Assume YYYY-MM-DD from input[type="date"]
+                const [year, month, day] = dateString.split('-');
+                return `${day}/${month}/${year}`;
+            }
 
             // FUNÇÕES GERAIS
             function updateDashboard() {
@@ -357,11 +396,15 @@
 
                 tiDemands.forEach(demand => {
                     const descPreview = demand.desc.substring(0, 90) + (demand.desc.length > 90 ? '...' : '');
+                    const formattedStart = formatDateDisplay(demand.startDate);
+                    const formattedEnd = formatDateDisplay(demand.endDate);
                     
                     const itemHtml = `
                         <div data-id="${demand.id}" class="kanban-card bg-white p-3 rounded-lg shadow-sm border border-orange-200 cursor-pointer transition-shadow duration-150">
                             <h5 class="font-bold text-sm text-orange-900">${demand.title}</h5>
                             <p class="text-xs text-gray-500 mt-1 mb-2">${descPreview}</p>
+                            <p class="text-xs font-medium text-gray-700">Início: <span class="font-semibold">${formattedStart}</span></p>
+                            <p class="text-xs font-medium text-gray-700">Término: <span class="font-semibold">${formattedEnd}</span></p>
                             <p class="text-xs font-medium text-gray-700">Resp: <span class="font-semibold">${demand.responsible || 'Não Definido'}</span></p>
                         </div>`;
                     
@@ -387,6 +430,21 @@
                     });
                 });
             }
+            
+            // LÓGICA DE HABILITAÇÃO/DESABILITAÇÃO DA DATA FINAL
+            function toggleEndDateInput(status) {
+                const endDateInput = document.getElementById('modal-end-date');
+                if (status === 'Concluída') {
+                    endDateInput.disabled = false;
+                    // Sugere a data de hoje se o campo estiver vazio ao mudar para Concluída
+                    if (!endDateInput.value) {
+                         endDateInput.value = getTodayDateFormatted();
+                    }
+                } else {
+                    endDateInput.disabled = true;
+                    // Garante que a data de início não seja alterável, mas visível
+                }
+            }
 
             // FUNÇÕES DO MODAL
             function openDemandModal(id) {
@@ -398,6 +456,16 @@
                 document.getElementById('modal-description').value = demand.desc;
                 document.getElementById('modal-responsible').value = demand.responsible;
                 document.getElementById('modal-status').value = demand.status;
+                
+                // Data de Início é sempre preenchida e não deve ser editável, apenas exibida
+                document.getElementById('modal-start-date').value = demand.startDate || '';
+                document.getElementById('modal-start-date').disabled = true; // Desabilita edição de Data de Início
+
+                document.getElementById('modal-end-date').value = demand.endDate || '';
+
+                // Aplica a lógica de habilitação/desabilitação da data final
+                toggleEndDateInput(demand.status);
+
                 document.getElementById('modal-title-display').textContent = demand.title;
 
                 modal.classList.remove('invisible', 'opacity-0');
@@ -405,6 +473,8 @@
             }
 
             function closeDemandModal() {
+                // Reabilita o input de Data de Início antes de fechar para não afetar aberturas futuras
+                document.getElementById('modal-start-date').disabled = false; 
                 modal.classList.remove('visible', 'opacity-100');
                 modal.classList.add('invisible', 'opacity-0');
             }
@@ -415,16 +485,32 @@
                 if (e.target === modal) closeDemandModal(); // Fecha ao clicar fora
             });
 
+            // Listener para controlar o estado da Data de Término ao mudar o status
+            document.getElementById('modal-status').addEventListener('change', function(e) {
+                toggleEndDateInput(e.target.value);
+            });
+
             editForm.addEventListener('submit', function (e) {
                 e.preventDefault();
                 const id = parseInt(document.getElementById('modal-demand-id').value);
                 const demandIndex = tiDemands.findIndex(d => d.id === id);
 
                 if (demandIndex > -1) {
+                    const newStatus = document.getElementById('modal-status').value;
+                    const newEndDate = document.getElementById('modal-end-date').value;
+
+                    // Lógica para limpar a data final se o status não for Concluída
+                    let finalEndDate = newEndDate;
+                    if (newStatus !== 'Concluída') {
+                        finalEndDate = '';
+                    }
+
                     tiDemands[demandIndex].title = document.getElementById('modal-title').value.trim();
                     tiDemands[demandIndex].desc = document.getElementById('modal-description').value.trim();
                     tiDemands[demandIndex].responsible = document.getElementById('modal-responsible').value.trim();
-                    tiDemands[demandIndex].status = document.getElementById('modal-status').value;
+                    tiDemands[demandIndex].status = newStatus;
+                    // Data de Início não é lida aqui, pois a edição foi desabilitada
+                    tiDemands[demandIndex].endDate = finalEndDate; 
                     
                     renderTIDemands();
                     updateDashboard();
@@ -434,7 +520,7 @@
 
             deleteDemandButton.addEventListener('click', function() {
                 const id = parseInt(document.getElementById('modal-demand-id').value);
-                // Não usamos alert/confirm. Vamos simular a remoção direta para manter a conformidade.
+                // Remoção direta (conforme a regra de não usar alert/confirm)
                 tiDemands = tiDemands.filter(d => d.id !== id);
                 
                 renderTIDemands();
@@ -474,12 +560,12 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { family: "'Inter', sans-serif" } } } },
+                    plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { family: "'Inter', sans-serif" } } }, tooltip: { callbacks: { label: function(context) { let label = context.label || ''; if (label) { label += ': '; } if (context.parsed !== null) { label += context.parsed + ' atividades'; } return label; } } } },
                     cutout: '60%'
                 }
             });
             
-            // LÓGICA DO FORMULÁRIO DE ADIÇÃO
+            // LÓGICA DO FORMULÁRIO DE ADIÇÃO (Define Data de Início)
             document.getElementById('add-demand-form').addEventListener('submit', function (e) {
                 e.preventDefault();
                 const titleInput = document.getElementById('new-demand-title');
@@ -496,7 +582,9 @@
                         title: newTitle, 
                         desc: newDescription, 
                         status: "Demanda", // Inicia sempre no status "Demanda"
-                        responsible: newResponsible
+                        responsible: newResponsible,
+                        startDate: getTodayDateFormatted(), // Define Data de Início (Data da Criação)
+                        endDate: ''    // Data de término vazia
                     });
                     
                     titleInput.value = '';
