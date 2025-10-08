@@ -148,7 +148,7 @@
             <section id="capacitacao" class="tab-content hidden space-y-6">
                 <header>
                     <h2 class="text-2xl font-bold text-orange-900">👥 Alinhamento e Capacitação</h2>
-                    <p class="text-gray-600 mt-1">Atividades voltadas para a formação e integração da equipe do projeto. **Adicione as datas de execução para cada item.**</p>
+                    <p class="text-gray-600 mt-1">Atividades voltadas para a formação e integração da equipe do projeto. **Clique na data para editá-la.**</p>
                 </header>
                 
                 <!-- Formulário de Adição de Atividade de Capacitação -->
@@ -493,20 +493,14 @@
                             <p style="font-size: 11pt; font-style: italic; margin-bottom: 40px; color: #555;">Autor: Equipe de Projeto IntegraCAR | Data: ${formatDateDisplay(getTodayDateFormatted()).replace(/\//g, '-')}</p>
                         </div>
                         
-                        <!-- 1. RESUMO -->
-                        <h2>1. RESUMO</h2>
-                        <p>
-                            O presente relatório abrange as atividades do Projeto IntegraCAR no período de ${dateTitle}, com foco na otimização da análise de Cadastros Ambientais Rurais (CAR). O mapeamento identificou um total de ${totalActivities} atividades relevantes, distribuídas em três pilares: Capacitação, Fluxo Operacional e TI & Automação. Os principais resultados incluem a formalização da metodologia de análise (${flowAct.length} etapas definidas) e o avanço em ${completedCapacitacaoCount}/${filteredCapacitacao.length} atividades de capacitação, fundamentais para a padronização e escalabilidade do processo.
-                        </p>
-
                         <!-- 2. INTRODUÇÃO E OBJETIVOS -->
-                        <h2>2. INTRODUÇÃO E OBJETIVOS</h2>
+                        <h2>1. INTRODUÇÃO E OBJETIVOS</h2>
                         <p>
                             O Projeto IntegraCAR visa desenvolver uma metodologia robusta e automatizada para a validação de processos do CAR, em colaboração com o IDAF. O objetivo principal deste documento é registrar as entregas e o status dos processos operacionais e tecnológicos, conforme a estrutura de acompanhamento e prestação de contas do CNPq, demonstrando a evolução das atividades do plano de trabalho no período.
                         </p>
-
+                        
                         <!-- 3. METODOLOGIA (FLUXO OPERACIONAL) -->
-                        <h2>3. METODOLOGIA: O FLUXO OPERACIONAL DE ANÁLISE</h2>
+                        <h2>2. METODOLOGIA: O FLUXO OPERACIONAL DE ANÁLISE</h2>
                         <p>
                             A metodologia de trabalho é definida pela sequência de etapas formalizadas para a análise dos documentos e mapas do CAR, garantindo a rastreabilidade e a qualidade do processo. O fluxo operacional é composto por ${flowAct.length} etapas, representando o processo padrão de análise e gestão dos cadastros:
                         </p>
@@ -522,13 +516,13 @@
                         </ol>
 
                         <!-- 4. RESULTADOS E DISCUSSÃO -->
-                        <h2>4. RESULTADOS E DISCUSSÃO</h2>
+                        <h2>3. RESULTADOS E DISCUSSÃO</h2>
                         <p>
                             Os resultados no período concentraram-se na execução das ações de capacitação, na homologação do fluxo metodológico e no avanço das demandas de automação para a TI.
                         </p>
                         
                         <!-- SUB-SEÇÃO CAPACITAÇÃO -->
-                        <h3>4.1. Ações de Alinhamento e Capacitação</h3>
+                        <h3>3.1. Ações de Alinhamento e Capacitação</h3>
                         <table>
                             <thead>
                                 <tr><th>Atividade</th><th>Data de Execução</th><th>Status</th></tr>
@@ -546,7 +540,7 @@
                         </table>
                         
                         <!-- SUB-SEÇÃO TI -->
-                        <h3>4.2. Tecnologia e Automação (Demandas Ativas ou Concluídas)</h3>
+                        <h3>3.2. Tecnologia e Automação (Demandas Ativas ou Concluídas)</h3>
                         <table>
                             <thead>
                                 <tr><th>Demanda</th><th>Responsável</th><th>Status</th><th>Início</th><th>Término</th></tr>
@@ -566,9 +560,9 @@
                         </table>
 
                         <!-- 5. CONCLUSÃO -->
-                        <h2>5. CONCLUSÃO</h2>
+                        <h2>4. CONCLUSÃO</h2>
                         <p>
-                            O projeto IntegraCAR demonstrou progresso significativo no período, com a consolidação da metodologia de trabalho (Seção 3) e o avanço das atividades de capacitação e tecnológica (Seção 4). A equipe atingiu o índice de ${completedCapacitacaoCount}/${filteredCapacitacao.length} atividades de formação concluídas e direcionou as demandas necessárias para automação. O próximo período de relatório focará na homologação das soluções de TI e na aplicação do fluxo operacional na análise em lote dos cadastros para cumprir as metas estabelecidas.
+                            O projeto IntegraCAR demonstrou progresso significativo no período, com a consolidação da metodologia de trabalho (Seção 2) e o avanço das atividades de capacitação e tecnológica (Seção 3). A equipe atingiu o índice de ${completedCapacitacaoCount}/${filteredCapacitacao.length} atividades de formação concluídas e direcionou as demandas necessárias para automação. O próximo período de relatório focará na homologação das soluções de TI e na aplicação do fluxo operacional na análise em lote dos cadastros para cumprir as metas estabelecidas.
                         </p>
 
                     </body>
@@ -637,6 +631,20 @@
             }
             
             // --- FUNÇÕES DE CAPACITAÇÃO (CRUD) ---
+            
+            function updateCapacitacaoDate(id, newDate) {
+                const activity = capacitacaoActivities.find(a => a.id === id);
+                if (activity) {
+                    // 1. Atualiza a data
+                    activity.date = newDate;
+                    // 2. Atualiza o status de conclusão com base na data atual
+                    activity.completed = new Date(newDate) <= new Date(getTodayDateFormatted());
+                    renderCapacitacaoActivities();
+                    // Atualiza o dashboard para recontar se necessário (embora o count não mude, apenas o conteúdo)
+                    updateDashboard(); 
+                }
+            }
+
 
             function renderCapacitacaoActivities() {
                 const listContainer = document.getElementById('capacitacao-list');
@@ -648,15 +656,12 @@
 
                 sortedActivities.forEach(activity => {
                     const dateDisplay = formatDateDisplay(activity.date);
+                    const statusIcon = activity.completed ? '✔️' : '⏳';
                     
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'capacitacao-list-item flex items-start justify-between p-3 rounded-lg border border-orange-200 transition-colors hover:bg-orange-50 relative';
                     itemDiv.setAttribute('data-id', activity.id);
                     
-                    const statusIcon = activity.completed ? 
-                        `<span class="text-green-500 mr-3 text-lg shrink-0">✔️</span>` :
-                        `<span class="text-yellow-500 mr-3 text-lg shrink-0">⏳</span>`;
-
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-btn text-gray-400 hover:text-red-600 p-1 rounded-full ml-3 shrink-0 opacity-0 transition-opacity absolute top-1 right-1';
                     deleteBtn.innerHTML = '&times;';
@@ -670,15 +675,65 @@
 
                     itemDiv.innerHTML = `
                         <div class="flex items-start flex-1 pr-10">
-                            ${statusIcon}
+                            <span class="text-lg mr-3 shrink-0">${statusIcon}</span>
                             <div>
                                 <p class="text-sm font-medium text-gray-800">${activity.title}</p>
-                                <p class="text-xs text-gray-500 mt-0.5">Execução: <span class="font-semibold text-orange-700">${dateDisplay}</span></p>
+                                <div class="flex items-center">
+                                    <span class="text-xs text-gray-500 mt-0.5 mr-2">Execução:</span>
+                                    <!-- DISPLAY DA DATA EDITÁVEL -->
+                                    <span class="font-semibold text-orange-700 cursor-pointer hover:bg-orange-200 px-1 py-0.5 rounded transition-all inline-block" 
+                                        data-type="display" 
+                                        data-id="${activity.id}"
+                                        title="Clique para editar a data">
+                                        ${dateDisplay}
+                                    </span>
+                                    <input type="date" 
+                                        class="hidden p-1 border border-orange-400 rounded-md text-xs w-28" 
+                                        data-type="input" 
+                                        data-id="${activity.id}"
+                                        value="${activity.date}">
+                                </div>
                             </div>
                         </div>
                     `;
                     itemDiv.appendChild(deleteBtn);
                     listContainer.appendChild(itemDiv);
+                });
+                
+                // Adiciona listeners para edição da data
+                listContainer.querySelectorAll('[data-type="display"]').forEach(span => {
+                    span.addEventListener('click', function() {
+                        const id = parseInt(this.getAttribute('data-id'));
+                        const input = listContainer.querySelector(`input[data-id="${id}"][data-type="input"]`);
+                        this.classList.add('hidden');
+                        input.classList.remove('hidden');
+                        input.focus();
+                    });
+                });
+
+                listContainer.querySelectorAll('[data-type="input"]').forEach(input => {
+                    // Ação de salvar ao perder o foco (blur)
+                    input.addEventListener('blur', function() {
+                        const id = parseInt(this.getAttribute('data-id'));
+                        const display = listContainer.querySelector(`span[data-id="${id}"][data-type="display"]`);
+                        
+                        this.classList.add('hidden');
+                        display.classList.remove('hidden');
+                        
+                        // Verifica se o valor mudou para acionar o update
+                        const activity = capacitacaoActivities.find(a => a.id === id);
+                        if (activity && activity.date !== this.value) {
+                            updateCapacitacaoDate(id, this.value);
+                        }
+                    });
+
+                    // Ação de salvar ao pressionar Enter
+                    input.addEventListener('keydown', function(e) {
+                         if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.blur();
+                        }
+                    });
                 });
             }
 
